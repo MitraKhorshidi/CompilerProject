@@ -1,5 +1,5 @@
 
-
+//my project
 %%
 
 
@@ -15,11 +15,10 @@
   private Token symbol(TokenType tokenType,Object value){
     return new Token(tokenType,value);
   }
+  String str="\"string";
 %}
 
-%line
-//%char
-//%column
+%line //count input lines
 %state COMMENT
 %state SINGLE_LINE_COMMENT
 // %debug
@@ -31,9 +30,9 @@ NONNEWLINE_WHITE_SPACE_CHAR=[\ \t\b\012]
 NEWLINE=\r|\n|\r\n
 WHITE_SPACE_CHAR={NONNEWLINE_WHITE_SPACE_CHAR}|{NEWLINE}
 STRING_TEXT=(\\\"|[^\n\r\"]|\\{WHITE_SPACE_CHAR}+\\)*
-COMMENT_TEXT=([^*/\n]|[^*\n]"/"[^*\n]|[^/\n]"*"[^/\n]|"*"[^/\n]|"/"[^*\n])+
+//COMMENT_TEXT=([^*/\n]|[^*\n]"/"[^*\n]|[^/\n]"*"[^/\n]|"*"[^/\n]|"/"[^*\n])+
 Id = {ALPHA}({ALPHA}|{DIGIT}|_)*
-number= {DIGIT}+
+number= [+-]?{DIGIT}+(\.{DIGIT}+)?
 
 
 
@@ -53,8 +52,9 @@ number= {DIGIT}+
   "public"    {return symbol(TokenType.PUBLIC);}  
   "default"    {return symbol(TokenType.DEFAULT);}  
   "continue"    {return symbol(TokenType.CONTINUE);} 
-  "return"    {return symbol(TokenType.RETURN);}  
-  
+  "return"    {return symbol(TokenType.RETURN);}
+
+
   "long"    {return symbol(TokenType.LONG);}  
   "int"    {return symbol(TokenType.INT);}  
   "double"    {return symbol(TokenType.DOUBLE);}  
@@ -100,14 +100,26 @@ number= {DIGIT}+
 
 
   {number}  {
-    int num=Integer.parseInt(yytext());
+    Double num=Double.parseDouble(yytext());
     return symbol(TokenType.NUMBER,num);
     }
+
 
   {Id} {
     String id=yytext();
     int index=SymbolTable.register(id);
     return symbol(TokenType.ID,index);
+    }
+
+
+  \"{STRING_TEXT}\" {
+      String str =  yytext().substring(1,yylength()-1);
+      return symbol(TokenType.STRING_TEXT,str);
+    }
+
+    \"{STRING_TEXT} {
+      String str =  yytext();
+      ErrorHandler.error(yyline,str);
     }
 
   
@@ -117,7 +129,9 @@ number= {DIGIT}+
   "//" { yybegin(SINGLE_LINE_COMMENT); }
 
 
-  "/*" { yybegin(COMMENT); comment_count++; }
+  "/*" { yybegin(COMMENT);
+//         comment_count++;
+      }
   
 
 }
@@ -128,9 +142,11 @@ number= {DIGIT}+
 }
 
 <COMMENT> {
-  "/*" { comment_count++; }
-  "*/" { if (--comment_count == 0) yybegin(YYINITIAL); }
-  {COMMENT_TEXT} { }
+//  "/*" { comment_count++; }
+//  "*/" { if (--comment_count == 0) yybegin(YYINITIAL); }
+    "*/" {  yybegin(YYINITIAL); }
+//  {COMMENT_TEXT} { }
+  . {}
 }
 
   {NEWLINE} { }

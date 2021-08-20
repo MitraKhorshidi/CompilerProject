@@ -1,27 +1,29 @@
 
 //my project
+import java_cup.runtime.*;
 %%
 
 
 %class Lexer
 %public
-%type Token
-
-%{
-  private int comment_count = 0;
-  private Token symbol(TokenType tokenType){
-    return new Token(tokenType,null);
-  }
-  private Token symbol(TokenType tokenType,Object value){
-    return new Token(tokenType,value);
-  }
-  String str="\"string";
-%}
-
+%type Symbol
+%cup
 %line //count input lines
 %state COMMENT
 %state SINGLE_LINE_COMMENT
-// %debug
+//%debug
+
+%{
+  private int comment_count = 0;
+    private Symbol symbol(int tokenType){
+      return new Symbol(tokenType,yytext());
+    }
+    private Symbol symbol(int tokenType,Object value){
+      return new Symbol(tokenType,value);
+    }
+%}
+
+
 
 
 ALPHA=[A-Za-z]
@@ -31,8 +33,10 @@ NEWLINE=\r|\n|\r\n
 WHITE_SPACE_CHAR={NONNEWLINE_WHITE_SPACE_CHAR}|{NEWLINE}
 STRING_TEXT=(\\\"|[^\n\r\"]|\\{WHITE_SPACE_CHAR}+\\)*
 //COMMENT_TEXT=([^*/\n]|[^*\n]"/"[^*\n]|[^/\n]"*"[^/\n]|"*"[^/\n]|"/"[^*\n])+
-Id = {ALPHA}({ALPHA}|{DIGIT}|_)*
-number= [+-]?{DIGIT}+(\.{DIGIT}+)?
+ID = {ALPHA}({ALPHA}|{DIGIT}|_)*
+INT_NUMBER={DIGIT}+
+FLOAT_NUMBER={DIGIT}+(\.{DIGIT}+)
+//number= [+-]?{DIGIT}+(\.{DIGIT}+)?
 
 
 
@@ -41,80 +45,85 @@ number= [+-]?{DIGIT}+(\.{DIGIT}+)?
 
 <YYINITIAL> {
             
-  "if"    {return symbol(TokenType.IF);}  
-  "else"    {return symbol(TokenType.ELSE);}   
-  "for"    {return symbol(TokenType.FOR);}  
-  "while"    {return symbol(TokenType.WHILE);}  
-  "then"    {return symbol(TokenType.THEN);}  
-  "break"    {return symbol(TokenType.BREAK);}  
-  "static"    {return symbol(TokenType.STATIC);}  
-  "void"    {return symbol(TokenType.VOID);}  
-  "public"    {return symbol(TokenType.PUBLIC);}  
-  "default"    {return symbol(TokenType.DEFAULT);}  
-  "continue"    {return symbol(TokenType.CONTINUE);} 
-  "return"    {return symbol(TokenType.RETURN);}
+  "if"    {return symbol(sym.IF);}  
+  "else"    {return symbol(sym.ELSE);}   
+  "for"    {return symbol(sym.FOR);}  
+  "while"    {return symbol(sym.WHILE);}  
+  "then"    {return symbol(sym.THEN);}  
+  "break"    {return symbol(sym.BREAK);}  
+  "static"    {return symbol(sym.STATIC);}  
+  "main"    {return symbol(sym.MAIN);}
+  "void"    {return symbol(sym.VOID);}
+  "public"    {return symbol(sym.PUBLIC);}
+  "default"    {return symbol(sym.DEFAULT);}  
+  "continue"    {return symbol(sym.CONTINUE);} 
+  "return"    {return symbol(sym.RETURN);}
+
+  "System.in.read"    {return symbol(sym.READ);}
+  "System.out.println"    {return symbol(sym.WRITE);}
 
 
-  "long"    {return symbol(TokenType.LONG);}  
-  "int"    {return symbol(TokenType.INT);}  
-  "double"    {return symbol(TokenType.DOUBLE);}  
-  "char"    {return symbol(TokenType.CHAR);}  
-  "String"    {return symbol(TokenType.STRING);}  
-  "boolean"    {return symbol(TokenType.BOOLEAN);}  
-  "float"    {return symbol(TokenType.FLOAT);}  
+  "int"    {return symbol(sym.PRI_TYPE,ValueType.INT);}
+  "boolean"    {return symbol(sym.PRI_TYPE,ValueType.BOOLEAN);}
+  "float"    {return symbol(sym.PRI_TYPE,ValueType.FLOAT);}
+  "String"    {return symbol(sym.PRI_TYPE,ValueType.STRING);}
 
 
-  "="    {return symbol(TokenType.ASSIGN);}  
+  "="    {return symbol(sym.ASSIGN);}  
+  "!"    {return symbol(sym.NOT);}
 
-  "+"    {return symbol(TokenType.PLUS);}
-  "-"    {return symbol(TokenType.MINUS);}
-  "*"    {return symbol(TokenType.MUL);}
-  "/"    {return symbol(TokenType.DIV);}  
-  "%"    {return symbol(TokenType.MOD);}  
-  "&&"   {return symbol(TokenType.AND);}
-  "||"   {return symbol(TokenType.OR);}
+  "+"    {return symbol(sym.MATH_OP);}
+  "-"    {return symbol(sym.MATH_OP);}
+  "*"    {return symbol(sym.MATH_OP);}
+  "/"    {return symbol(sym.MATH_OP);}
+  "%"    {return symbol(sym.MATH_OP);}
+  "&&"   {return symbol(sym.LOGIC_OP);}
+  "||"   {return symbol(sym.LOGIC_OP);}
 
-  "=="    {return symbol(TokenType.EQ);}
-  "!="    {return symbol(TokenType.NEQ);}  
-  "<"    {return symbol(TokenType.LT);}  
-  ">"    {return symbol(TokenType.GT);}  
-  "<="    {return symbol(TokenType.LTEQ);}  
-  ">="    {return symbol(TokenType.GTEQ);} 
+  "=="    {return symbol(sym.COMP_OP);}
+  "!="    {return symbol(sym.COMP_OP);}
+  "<"    {return symbol(sym.COMP_OP);}
+  ">"    {return symbol(sym.COMP_OP);}
+  "<="    {return symbol(sym.COMP_OP);}
+  ">="    {return symbol(sym.COMP_OP);}
 
-  "++"    {return symbol(TokenType.INC);}  
-  "--"    {return symbol(TokenType.DEC);}  
+  "++"    {return symbol(sym.INC_DEC);}
+  "--"    {return symbol(sym.INC_DEC);}
 
-  "false"    {return symbol(TokenType.FALSE);}  
-  "true"    {return symbol(TokenType.TRUE);}  
+  "false"    {return symbol(sym.TRUE_FALSE);}
+  "true"    {return symbol(sym.TRUE_FALSE);}
 
-  "("    {return symbol(TokenType.LPAR);}  
-  ")"    {return symbol(TokenType.RPAR);}  
-  "{"    {return symbol(TokenType.LBLOCK);}  
-  "}"    {return symbol(TokenType.RBLOCK);} 
-  "["    {return symbol(TokenType.LBRACKET);}  
-  "]"    {return symbol(TokenType.RBRACKET);}  
-  ";"    {return symbol(TokenType.SEMICOLON);}  
-  ","    {return symbol(TokenType.COMMA);}  
+  "("    {return symbol(sym.LPAR);}  
+  ")"    {return symbol(sym.RPAR);}  
+  "{"    {return symbol(sym.LBLOCK);}  
+  "}"    {return symbol(sym.RBLOCK);} 
+  "["    {return symbol(sym.LBRACKET);}  
+  "]"    {return symbol(sym.RBRACKET);}  
+  ";"    {return symbol(sym.SEMICOLON);}  
+  ","    {return symbol(sym.COMMA);}  
 
   
 
 
-  {number}  {
-    Double num=Double.parseDouble(yytext());
-    return symbol(TokenType.NUMBER,num);
+  {INT_NUMBER}  {
+    return symbol(sym.INT_NUMBER,Integer.parseInt(yytext()));
     }
 
+  {FLOAT_NUMBER}  {
+      return symbol(sym.FLOAT_NUMBER,Float.parseFloat(yytext()));
+      }
 
-  {Id} {
+
+  {ID} {
     String id=yytext();
-    int index=SymbolTable.register(id);
-    return symbol(TokenType.ID,index);
+    SymbolEntry entry=SymbolTable.curScope.register(id);
+    return symbol(sym.ID,entry);
     }
 
 
   \"{STRING_TEXT}\" {
       String str =  yytext().substring(1,yylength()-1);
-      return symbol(TokenType.STRING_TEXT,str);
+      return symbol(sym.STRING_TEXT,str);
     }
 
     \"{STRING_TEXT} {

@@ -1,0 +1,117 @@
+import java.util.*;
+import java.io.*;
+import java_cup.runtime.*;
+import java_cup.runtime.ComplexSymbolFactory.ComplexSymbol;
+
+
+parser code {:
+  public boolean syntaxErrors;
+
+  public static void main(String[] args) {
+            java.io.Reader buffer;
+                try {
+                    if (args.length <= 1) buffer=new java.io.InputStreamReader(System.in);
+                    else {
+                        buffer = new java.io.InputStreamReader(new java.io.FileInputStream(args[0]));
+                    }
+                    Lexer lexer = new Lexer(buffer);
+                    parser p = new parser(lexer);
+//                    p.debug_parse();
+                    p.parse();
+
+          } catch (java.io.FileNotFoundException e) {
+              System.out.println("File not found : \"" + args[0] + "\"");
+          } catch (java.io.IOException e) {
+              System.out.println("IO error scanning file \"" + args[0] + "\"");
+              System.out.println(e);
+          } catch (Exception e) {
+              System.out.println("Unexpected exception:");
+              e.printStackTrace();
+
+          }
+
+
+
+      }
+       void checkDefined(SymbolEntry id,boolean defined){
+            if(defined && id.type==ValueType.UNKNOWN) ErrorHandler.error_varNotDefined(this,id);
+            if(!defined && id.type!=ValueType.UNKNOWN) ErrorHandler.error_varDefined(this,id);
+       }
+       ValueType checkType(ValueType t1, ValueType t2) {
+               if (t1 == t2) return t1;
+               else ErrorHandler.error_type(this, t1);
+               return  ValueType.UNKNOWN;
+
+           }
+:};
+
+//scan with {: return ((Lexer)getScanner()).next_token(); :};
+
+
+terminal        IF, WHILE, FOR, ELSE, THEN, BREAK, STATIC,THIS, VOID, PUBLIC,NEW, DEFAULT,
+                        CONTINUE, RETURN,CLASS,EXTENDS,MAIN,
+                    WRITE,READ,
+                    INT_NUMBER,FLOAT_NUMBER,TRUE_FALSE,STRING_TEXT,
+                    ASSIGN,INC_DEC,
+                    MATH_OP,LOGIC_OP,COMP_OP,
+                    NOT,COMMA,DOT,SEMICOLON,RBRACKET,LBRACKET,RBLOCK,LBLOCK,RPAR,LPAR;
+
+terminal SymbolEntry ID;
+terminal ValueType PRI_TYPE;
+
+
+non terminal app ,start_scope,end_scope , declList , decl , stmtList , stmt , cond ;
+non terminal ValueType expr,type ;
+
+precedence left ELSE, NOT, MATH_OP, LOGIC_OP, COMP_OP;
+
+app   ::=  VOID MAIN LPAR RPAR  LBLOCK start_scope declList stmtList RBLOCK end_scope
+    ;
+
+start_scope::=   {:SymbolTable.enterScope();:};
+end_scope::=   {:SymbolTable.exitScope();:};
+
+
+declList  ::=  decl declList
+    |/* emptyt */
+    ;
+
+type::= PRI_TYPE:t                                     {:RESULT=t;:}
+    ;
+
+decl ::= type:t ID:id SEMICOLON                         {:System.out.println(id);checkDefined(id,false);id.type=t;:}
+    ;
+
+
+stmtList  ::= stmtList stmt
+    |/* emptyt */
+    ;
+
+stmt ::= SEMICOLON
+    | LBLOCK start_scope declList stmtList RBLOCK end_scope
+    | ID:id ASSIGN expr:e SEMICOLON                         {:checkDefined(id,true);checkType(id.type,e);:}
+    | ID:id ASSIGN READ LPAR RPAR SEMICOLON                    {:checkDefined(id,true);:}
+    | ID:id ASSIGN READ LPAR STRING_TEXT RPAR SEMICOLON        {:checkDefined(id,true);:}
+    | WRITE LPAR expr RPAR SEMICOLON
+    | WRITE LPAR STRING_TEXT RPAR SEMICOLON
+    | IF LPAR cond RPAR stmt
+    | IF LPAR cond RPAR stmt ELSE stmt
+    | WHILE LPAR cond RPAR stmt
+    | FOR LPAR stmt SEMICOLON cond SEMICOLON stmt  RPAR stmt
+    | error                                                 {:ErrorHandler.error_stmt(parser);:}
+    ;
+
+
+cond ::= TRUE_FALSE
+    | LPAR cond RPAR
+    | NOT cond
+    | cond LOGIC_OP cond
+    | expr COMP_OP expr
+    ;
+
+expr ::= ID:id                                  {:checkDefined(id,true); RESULT= id.type; :}
+    | INT_NUMBER                                    {:RESULT= ValueType.INT; :}
+    | FLOAT_NUMBER                                    {:RESULT= ValueType.FLOAT; :}
+    | LPAR expr:e RPAR                            {:RESULT= e;:}
+    | expr:e1 MATH_OP expr:e2                     {:RESULT=checkType(e1,e2);:}
+;
